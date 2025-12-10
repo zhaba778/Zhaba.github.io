@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Секретное сообщение</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            background: #000;
+            color: #ff66b3;
+        }
+
+        #matrix, #messages {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        #messages { display: none; }
+        #messages.show { display: block; }
+
+        .message {
+            position: absolute;
+            font-size: 24px;
+            color: #ff66b3;
+            text-shadow: 0 0 10px rgba(255, 102, 179, 0.8);
+            animation: fall 8s linear infinite;
+            opacity: 1;
+            transform: translateX(-50%); /* Центрируем текст относительно позиции */
+            white-space: nowrap; /* Запрещаем перенос строки */
+        }
+
+        @keyframes fall {
+            0% { transform: translate(-50%, -50px); opacity: 1; }
+            100% { transform: translate(-50%, 100vh); opacity: 0; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .music-btn {
+            background: #ff66b3; border: none; color: #fff;
+            padding: 12px 40px; font-size: 16px;
+            cursor: pointer; transition: .3s;
+            text-transform: uppercase; letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(255,102,179,.6);
+            border-radius: 25px;
+        }
+
+        .music-btn:hover {
+            background: #ff0066;
+            box-shadow: 0 0 25px rgba(255,102,179,.9);
+            transform: scale(1.05);
+        }
+
+        .music-btn.hidden { display: none; }
+
+        .password-section {
+            background: rgba(0,0,0,0.8); border: 2px solid #ff66b3;
+            border-radius: 10px; padding: 40px; text-align: center;
+            box-shadow: 0 0 20px rgba(255,102,179,.5);
+            backdrop-filter: blur(10px);
+            transition: .5s;
+            display: none;
+        }
+
+        .password-section.show { display: block; animation: fadeIn .5s; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hint {
+            font-size: 18px; color: #ff66b3; margin-bottom: 20px;
+            text-shadow: 0 0 10px #ff66b3; letter-spacing: 2px;
+        }
+
+        .password-input {
+            background: rgba(0,0,0,.7); border: 2px solid #ff66b3;
+            color: #ff66b3; padding: 15px 20px; font-size: 18px;
+            width: 300px; margin-bottom: 20px; outline: none;
+            text-align: center; letter-spacing: 2px;
+            transition: .3s;
+        }
+
+        .password-input:focus {
+            box-shadow: 0 0 15px rgba(255,102,179,.8);
+        }
+
+        .submit-btn {
+            background: transparent; border: 2px solid #ff66b3;
+            color: #ff66b3; padding: 12px 40px; font-size: 16px;
+            cursor: pointer; transition: .3s;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        .submit-btn:hover {
+            background: rgba(255,102,179,.2);
+            box-shadow: 0 0 15px rgba(255,102,179,.8);
+            transform: scale(1.05);
+        }
+
+        .error-message {
+            color: red; margin-top: 15px; font-size: 14px;
+            text-shadow: 0 0 10px red;
+            opacity: 0; transition: .3s;
+        }
+
+        .error-message.show { opacity: 1; }
+
+        .progress-container { display: none; width: 400px; margin: 40px auto; }
+        .progress-container.show { display: block; }
+
+        .progress-bar {
+            width: 100%; height: 30px;
+            background: rgba(0,0,0,.7);
+            border-radius: 15px; overflow: hidden;
+            border: 2px solid #ff66b3; margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg,#ff66b3,#ff0066);
+            width: 0%; transition: width .3s;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(255,102,179,.6);
+        }
+
+        .final-message {
+            display: none; text-align: center;
+            animation: fadeIn 1s ease;
+        }
+        .final-message.show { display: block; }
+
+        .love-text {
+            font-size: 36px; line-height: 1.8; margin-bottom: 30px;
+            color: #fff; text-shadow: 0 0 20px rgba(255,255,255,.8);
+            font-weight: bold;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(255,255,255,.8); }
+            to { text-shadow: 0 0 40px #fff, 0 0 60px rgba(255,255,255,.8); }
+        }
+
+        .heart { font-size: 40px; animation: heartbeat 1s infinite; }
+        @keyframes heartbeat { 50% { transform: scale(1.3); } }
+
+        .bouquet { font-size: 80px; margin-top: 30px; animation: float 3s infinite; }
+        @keyframes float { 50% { transform: translateY(-20px); } }
+    </style>
+</head>
+
+<body>
+    <canvas id="matrix"></canvas>
+    <div id="messages"></div>
+
+    <div class="container">
+        <button class="music-btn" id="musicBtn" onclick="startMusic()">Войти</button>
+
+        <div class="password-section" id="passwordSection">
+            <div class="hint">Подсказка: твой год рождения + мой </div>
+            <input type="password" id="passwordInput" class="password-input" placeholder="Пароль" autocomplete="off">
+            <br>
+            <button class="submit-btn" onclick="checkPassword()">Войти</button>
+            <div class="error-message" id="errorMessage">Неверный пароль!</div>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <div class="final-message" id="finalMessage">
+            <div class="love-text">
+                Чем дольше я с тобой<br>тем сильнее я тебя люблю <span class="heart">💞</span>
+            </div>
+            <div class="bouquet">💐</div>
+        </div>
+    </div>
+
+    <script>
+        // MATRIX
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+
+        const matrix = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%+-/~{[|`]}".split("");
+        const fontSize = 14;
+        let columns, drops;
+
+        function initMatrix() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            columns = Math.ceil(canvas.width / fontSize);
+            drops = Array.from({length: columns}, () => 1);
+        }
+
+        initMatrix();
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0,0,0,0.04)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#ff66b3';
+            ctx.font = fontSize + 'px monospace';
+
+            drops.forEach((drop, i) => {
+                const text = matrix[Math.floor(Math.random() * matrix.length)];
+                ctx.fillText(text, i * fontSize, drop * fontSize);
+
+                if (drop * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        }
+
+        let matrixInterval = setInterval(draw, 35);
+
+        // Обработчик изменения размера окна
+        window.addEventListener('resize', () => {
+            initMatrix();
+        });
+
+        function stopMatrix() {
+            clearInterval(matrixInterval);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // LOVE MESSAGES - РАВНОМЕРНОЕ РАСПРЕДЕЛЕНИЕ КАК МАТРИЦА
+        function createMessages() {
+            const box = document.getElementById('messages');
+            const text = "люблю тебя ❤️";
+            
+            // Используем ту же систему колонок что и матрица для равномерного распределения
+            const isMobile = window.innerWidth < 768;
+            // Меньше колонок для текста (текст длиннее символов матрицы)
+            const messageColumns = isMobile ? Math.floor(window.innerWidth / 80) : Math.floor(window.innerWidth / 100);
+            
+            // Равномерное распределение по всей ширине экрана, как матрица
+            const step = window.innerWidth / (messageColumns + 1); // +1 чтобы не было на самом краю
+            
+            for (let i = 1; i <= messageColumns; i++) {
+                // Позиция в пикселях, равномерно распределенная
+                const positionPx = i * step;
+                
+                // Функция для создания сообщения в конкретной колонке
+                function createMessageInColumn() {
+                    const msg = document.createElement('div');
+                    msg.className = 'message';
+                    msg.textContent = text;
+                    // Используем пиксели, центрирование уже в CSS
+                    msg.style.left = positionPx + 'px';
+                    msg.style.top = '-50px';
+                    // Адаптивный размер шрифта для мобильных
+                    const baseSize = isMobile ? 18 : 20;
+                    msg.style.fontSize = (baseSize + Math.random() * (isMobile ? 12 : 20)) + 'px';
+                    
+                    // РАЗНАЯ СКОРОСТЬ для каждой надписи (от 6 до 12 секунд)
+                    const speed = 6 + Math.random() * 6;
+                    msg.style.animationDuration = speed + 's';
+                    
+                    box.appendChild(msg);
+                    setTimeout(() => msg.remove(), speed * 1000);
+                }
+                
+                // Запускаем генерацию для каждой колонки с разными интервалами
+                const interval = isMobile ? 1200 + Math.random() * 1800 : 1000 + Math.random() * 2000;
+                setInterval(createMessageInColumn, interval);
+                
+                // Начальное сообщение в каждой колонке со случайной задержкой
+                setTimeout(createMessageInColumn, Math.random() * 2000);
+            }
+        }
+
+        // MUSIC + PASSWORD
+        function startMusic() {
+            document.getElementById('musicBtn').classList.add('hidden');
+            document.getElementById('passwordSection').classList.add('show');
+
+            setTimeout(() => {
+                document.getElementById('passwordInput').focus();
+            }, 100);
+        }
+
+        const correctPassword = "4018";
+
+        function checkPassword() {
+            const input = document.getElementById('passwordInput');
+            const err = document.getElementById('errorMessage');
+            const progress = document.getElementById('progressContainer');
+            const final = document.getElementById('finalMessage');
+            const messages = document.getElementById('messages');
+
+            if (input.value === correctPassword) {
+                document.getElementById('passwordSection').style.display = 'none';
+                progress.classList.add('show');
+
+                let p = 0;
+                const fill = document.getElementById('progressFill');
+                const timer = setInterval(() => {
+                    p += 2;
+                    fill.style.width = p + '%';
+
+                    if (p >= 100) {
+                        clearInterval(timer);
+                        setTimeout(() => {
+                            progress.classList.remove('show');
+                            stopMatrix();
+                            messages.classList.add('show');
+                            createMessages();
+                            final.classList.add('show');
+                        }, 500);
+                    }
+                }, 50);
+
+            } else {
+                err.classList.add('show');
+                input.value = '';
+                setTimeout(() => err.classList.remove('show'), 2000);
+            }
+        }
+
+        document.addEventListener('keypress', e => {
+            if (e.key === 'Enter') checkPassword();
+        });
+    </script>
+</body>
+</html>
